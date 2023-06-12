@@ -56,7 +56,7 @@ void InsMechanizer::velocityUpdate(const ImuData &curr_imu, double *vel) {
     v3 rotate = curr_gyro.cross(curr_accl) / 2.0;
     v3 scull = (prev_gyro.cross(curr_accl) + prev_accl.cross(curr_gyro)) / 12.0;
     v3 dv_fb = curr_accl + rotate + scull;
-    v3 dv_fn = (Eigen::Matrix3d::Identity() - skewSymmetric(zeta) * 0.5) * _att.toRotationMatrix() * dv_fb;
+    v3 dv_fn = (Eigen::Matrix3d::Identity() - SkewSymmetric(zeta) * 0.5) * _att.toRotationMatrix() * dv_fb;
     for (int i = 0; i < 3; ++i) vel[i] = _vel[i] + dv_fn(i) + dv_gn(i);
 }
 
@@ -89,7 +89,7 @@ void InsMechanizer::INSUpdate(const ImuData &data) {
     _state_queue.emplace_back(_pos, _vel);
 }
 
-void InsMechanizer::printState() const {
+void InsMechanizer::PrintState() const {
     printf("time %.3f\n", _imu_data.getSecond());
     printf("\t B: %.9f, L: %.9f, H: %.6f\n", R2D(_pos[0]), R2D(_pos[1]), _pos[2]);
     printf("\t VN: %.6f, VE: %.6f, VD: %.6f\n", _vel[0], _vel[1], _vel[2]);

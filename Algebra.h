@@ -18,7 +18,7 @@ namespace Utility {
 
     EulerAngle MatrixToEulerAngle(const Eigen::Matrix3d &DCM);
     EulerAngle QuaternionToEulerAngle(const Eigen::Quaterniond& q);
-    Eigen::Matrix3d skewSymmetric(const Eigen::Vector3d& vector);
+    Eigen::Matrix3d SkewSymmetric(const Eigen::Vector3d& vector);
     Eigen::Quaterniond RotateVectorToQuaternion(const Eigen::Vector3d& vector);
     Eigen::Quaterniond EulerAngleToQuaternion(const EulerAngle& euler_angle);
 };

@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <chrono>
 #include <Eigen/Dense>
 #include "Algebra.h"
 #include "Geodesy.h"
@@ -9,6 +10,7 @@
 #include "GnssInsFilter.h"
 
 using namespace Utility;
+using namespace std::chrono;
 
 constexpr double max_gap{ 0.011 };
 double std_pos[3]{ 0.009, 0.008, -0.022 };
@@ -69,7 +71,7 @@ void INSMechanize(const std::vector<ImuData>& imu_data,
         }
         if (imu.getSecond() < tos || imu.getSecond() > toe) continue;
         ins.INSUpdate(imu);
-        ins.printState();
+        ins.PrintState();
     }
 }
 
@@ -113,7 +115,7 @@ void LooselyCouple(const std::vector<ImuData> &imu_data, const std::vector<GnssD
     double i_time, g_time;
     int i = 0, k = 0;
     while(fabs(imu_data.at(i).getSecond() - toe) > 1.0E-3) ++i;
-    filter.Initialize(pos, vel, att, gb, ab, gs, as, imu_data.at(0));
+    filter.Initialize(pos, vel, att, gb, ab, gs, as, imu_data.at(i));
     for (++i; i < imu_data.size(); ++i) {
         i_time = imu_data.at(i).getSecond();
         g_time = gnss_data.at(k).getSecond();
@@ -121,19 +123,24 @@ void LooselyCouple(const std::vector<ImuData> &imu_data, const std::vector<GnssD
         while (g_time < i_time) g_time = gnss_data.at(++k).getSecond();
         if (fabs(g_time - i_time) < 1.0E-9) filter.ProcessData(imu_data.at(i), gnss_data.at(k++));
         else filter.ProcessData(imu_data.at(i));
-        filter.PrintState();
     }
+    filter.PrintState();
 }
 
 int main() {
-    std::string public_path = "..//..//Rawdata//";
+    std::string public_path = "..//Rawdata//";
     std::string static_file = "3-2-static.ASC";
     std::string open_file = "3-2-open.ASC";
     double static_init_pos[3] = { D2R(30.5278045116), D2R(114.3557164314), 22.119 }; // static
     double open_init_pos[3]{ D2R(30.52844163), D2R(114.35697688), 22.334 }; // open
     std::vector<ImuData> imu_data;
+    imu_data.reserve(150000);
     std::vector<GnssData> pos_results;
-    ReadPosFile("..//..//Data//open.pos", pos_results);
+    ReadPosFile("..//Data//open.pos", pos_results);
+    auto start = system_clock::now();
     ReadIMUFile(public_path + open_file, imu_data);
     LooselyCouple(imu_data, pos_results, open_init_pos);
+    auto end = system_clock::now();
+    auto duration = duration_cast<seconds>(end - start);
+    std::cout << "duration: " << duration.count() << " seconds" << std::endl;
 }

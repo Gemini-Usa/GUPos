@@ -3,6 +3,7 @@
 //
 
 #include <cmath>
+#include <corecrt_math_defines.h>
 #include "Geodesy.h"
 
 double Utility::getLocalGravity(double phi, double h) {
@@ -50,7 +51,7 @@ Eigen::Vector3d Utility::getAng_innVec(double phi, double h, double vn, double v
     return Ang_ien + Ang_enn;
 }
 
-Eigen::Matrix3d Utility::getinv_DR(double phi, double h) {
+Eigen::Matrix3d Utility::getInv_DR(double phi, double h) {
     double R_M = getRM(phi);
     double R_N = getRN(phi);
     return Eigen::Vector3d(1 / (R_M + h), 1 / ((R_N + h) * cos(phi)), -1).asDiagonal();

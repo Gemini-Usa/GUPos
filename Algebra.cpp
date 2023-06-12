@@ -2,6 +2,7 @@
 // Created by 崔宇璐 on 2023/5/16.
 //
 
+#include <corecrt_math_defines.h>
 #include "Algebra.h"
 
 Utility::EulerAngle Utility::MatrixToEulerAngle(const Eigen::Matrix3d &DCM) {
@@ -38,7 +39,7 @@ Utility::EulerAngle Utility::QuaternionToEulerAngle(const Eigen::Quaterniond& q)
     return angles;
 }
 
-Eigen::Matrix3d Utility::skewSymmetric(const Eigen::Vector3d& vector) {
+Eigen::Matrix3d Utility::SkewSymmetric(const Eigen::Vector3d& vector) {
     Eigen::Matrix3d matrix;
     matrix << 0.0, -vector(2), vector(1),
             vector(2), 0.0, -vector(0),

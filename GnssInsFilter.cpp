@@ -132,7 +132,7 @@ void GnssInsFilter::setF_Anginn(GnssInsFilter::Fdim &F, double vn, double ve, do
     Ang_inn(0) = omg_e * cosphi + ve / (R_N + h);
     Ang_inn(1) = -vn / (R_M + h);
     Ang_inn(2) = -omg_e * sinphi - ve * tanphi / (R_N + h);
-    FAng_inn = skewSymmetric({ Ang_inn(0), Ang_inn(1), Ang_inn(2) });
+    FAng_inn = SkewSymmetric({Ang_inn(0), Ang_inn(1), Ang_inn(2)});
     F.block(6, 6, 3, 3) = -FAng_inn;
 }
 
@@ -156,7 +156,7 @@ GnssInsFilter::Fdim GnssInsFilter::buildF(const ImuData &imu, double dt) const {
 
     F.block(6, 9, 3, 3) = -C_bn;
     F.block(3, 12, 3, 3) = C_bn;
-    F.block(3, 6, 3, 3) = skewSymmetric(C_bn * fb);
+    F.block(3, 6, 3, 3) = SkewSymmetric(C_bn * fb);
     F.block(6, 15, 3, 3) = -C_bn * omg_ibb.asDiagonal();
     F.block(3, 18, 3, 3) = C_bn * fb.asDiagonal();
 
@@ -181,7 +181,7 @@ GnssInsFilter::Hdim GnssInsFilter::buildH(const ImuData &imu, double dt) const {
     Eigen::Matrix<double, 3, 21> Hr = Eigen::Matrix<double, 3, 21>::Zero();
     Eigen::Vector3d lb{ _lever[0], _lever[1], _lever[2] };
     Hr.block(0, 0, 3, 3) = Eigen::Matrix<double, 3, 3>::Identity();
-    Hr.block(0, 6, 3, 3) = skewSymmetric(att.toRotationMatrix() * lb);
+    Hr.block(0, 6, 3, 3) = SkewSymmetric(att.toRotationMatrix() * lb);
     H.block(0, 0, 3, 21) = Hr;
 
     Eigen::Matrix<double, 3, 21> Hv = Eigen::Matrix<double, 3, 21>::Zero();
@@ -192,11 +192,12 @@ GnssInsFilter::Hdim GnssInsFilter::buildH(const ImuData &imu, double dt) const {
     double tanphi = tan(pos[0]);
     Eigen::Matrix3d C_bn = att.toRotationMatrix();
     Eigen::Vector3d Ang_inn = getAng_innVec(pos[0], pos[2], vel[0], vel[1]);
-    Eigen::Matrix3d H_v3 = -(skewSymmetric(Ang_inn) * skewSymmetric(C_bn * lb)) - skewSymmetric(C_bn * lb.cross(omg_ibb));
-    Eigen::Matrix3d H_v6 = -C_bn * skewSymmetric(lb) * omg_ibb.asDiagonal();
+    Eigen::Matrix3d H_v3 = -(SkewSymmetric(Ang_inn) * SkewSymmetric(C_bn * lb)) -
+                           SkewSymmetric(C_bn * lb.cross(omg_ibb));
+    Eigen::Matrix3d H_v6 = -C_bn * SkewSymmetric(lb) * omg_ibb.asDiagonal();
     Hv.block(0, 3, 3, 3) = Eigen::Matrix3d::Identity();
     Hv.block(0, 6, 3, 3) = H_v3;
-    Hv.block(0, 9, 3, 3) = -C_bn * skewSymmetric(lb);
+    Hv.block(0, 9, 3, 3) = -C_bn * SkewSymmetric(lb);
     Hv.block(0, 15, 3, 3) = H_v6;
     H.block(3, 0, 3, 21) = Hv;
 
@@ -252,7 +253,7 @@ GnssInsFilter::zdim GnssInsFilter::buildz(const ImuData &imu, const GnssData &gn
     omg_ibb /= dt;
     // position observation
     Eigen::Vector3d r_G(g_pos[0], g_pos[1], g_pos[2]);
-    Eigen::Matrix3d invD_R = getinv_DR(i_pos[0], i_pos[2]);
+    Eigen::Matrix3d invD_R = getInv_DR(i_pos[0], i_pos[2]);
     Eigen::Vector3d hatr_I(i_pos[0], i_pos[1], i_pos[2]);
     Eigen::Vector3d hatr_G = hatr_I + invD_R * Cb_n * lb;
     Eigen::Vector3d z_r = invD_R.inverse() * (hatr_G - r_G);
@@ -260,7 +261,7 @@ GnssInsFilter::zdim GnssInsFilter::buildz(const ImuData &imu, const GnssData &gn
     Eigen::Vector3d v_G(g_vel[0], g_vel[1], g_vel[2]);
     Eigen::Vector3d hatv_I(i_vel[0], i_vel[1], i_vel[2]);
     Eigen::Vector3d omg_inn = getAng_ienVec(i_pos[0]) + getAng_ennVec(i_pos[0], i_pos[2], i_vel[0], i_vel[1]);
-    Eigen::Vector3d hatv_G = hatv_I - skewSymmetric(omg_inn) * Cb_n * lb - Cb_n * lb.cross(omg_ibb);
+    Eigen::Vector3d hatv_G = hatv_I - SkewSymmetric(omg_inn) * Cb_n * lb - Cb_n * lb.cross(omg_ibb);
     Eigen::Vector3d z_v = hatv_G - v_G;
     z << z_r, z_v;
     return z;
@@ -296,7 +297,7 @@ void GnssInsFilter::ProcessData(const ImuData &imu, const GnssData &gnss) {
     Eigen::Vector3d dr{ _x.segment(0, 3) }; // delta ned
     Eigen::Vector3d dv{ _x.segment(3, 3) };
     Eigen::Vector3d dphi{ _x.segment(6, 3) }; // delta rotate-vector
-    Eigen::Matrix3d invD_R = getinv_DR(pos[0], pos[2]);
+    Eigen::Matrix3d invD_R = getInv_DR(pos[0], pos[2]);
     Eigen::Vector3d dp = invD_R * dr; // delta blh
     Eigen::Quaterniond dq = RotateVectorToQuaternion(dphi); // delta quaternion
     _ins.Correct(dp, dv, dq);
@@ -314,5 +315,5 @@ void GnssInsFilter::ProcessData(const ImuData &imu, const GnssData &gnss) {
 }
 
 void GnssInsFilter::PrintState() const {
-    _ins.printState();
+    _ins.PrintState();
 }

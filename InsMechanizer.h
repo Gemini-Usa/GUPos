@@ -16,7 +16,7 @@ class InsMechanizer {
 public:
     void Initialize(const double* pos, const double* vel, const Eigen::Quaterniond& att, const ImuData& imu);
     void INSUpdate(const ImuData& data);
-    void printState() const;
+    void PrintState() const;
     double getTimeInterval(double curr_time) const;
     std::string getStateInfo() const;
     void Correct(const Eigen::Vector3d &dp, const Eigen::Vector3d &dv, const Eigen::Quaterniond &dq);
