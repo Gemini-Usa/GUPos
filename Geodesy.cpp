@@ -3,7 +3,9 @@
 //
 
 #include <cmath>
+#ifdef _WIN32
 #include <corecrt_math_defines.h>
+#endif
 #include "Geodesy.h"
 
 double Utility::getLocalGravity(double phi, double h) {

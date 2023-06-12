@@ -21,6 +21,7 @@ public:
     void setRandomWalk(double ARW, double VRW);
     void ProcessData(const ImuData &imu, const GnssData &gnss = GnssData());
     void PrintState() const;
+    std::tuple<const double *, const double *, Eigen::Quaterniond> getState() const;
 private:
     static void setF_rr(Fdim &F, double vn, double ve, double vd, double phi, double h);
     static void setF_vr(Fdim &F, double vn, double ve, double vd, double phi, double h);

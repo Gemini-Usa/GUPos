@@ -97,16 +97,6 @@ void InsMechanizer::PrintState() const {
     printf("\t roll: %.6f, pitch: %.6f, yaw: %.6f\n", R2D(euler_angle.roll), R2D(euler_angle.pitch), R2D(euler_angle.yaw));
 }
 
-std::string InsMechanizer::getStateInfo() const {
-    char str[200];
-    EulerAngle euler_angle = QuaternionToEulerAngle(_att);
-    std::sprintf(str, "%10.3f %13.9f %13.9f %13.6f %13.9f %13.9f %13.9f %10.3f %10.3f %10.3f",
-         _imu_data.getSecond(), R2D(_pos[0]), R2D(_pos[1]), _pos[2],
-         _vel[0], _vel[1], _vel[2],
-         R2D(euler_angle.roll), R2D(euler_angle.pitch), R2D(euler_angle.yaw));
-    return {str};
-}
-
 double InsMechanizer::getTimeInterval(double curr_time) const {
     return curr_time - _imu_data.getSecond();
 }
@@ -129,4 +119,8 @@ void InsMechanizer::Correct(const Vector3d &dp, const Vector3d &dv, const Quater
         _vel[i] -= dv(i);
     }
     _att = dq * _att;
+}
+
+std::tuple<const double *, const double *, Eigen::Quaterniond> InsMechanizer::getState() const {
+    return std::make_tuple(_pos, _vel, _att);
 }

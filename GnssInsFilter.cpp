@@ -317,3 +317,7 @@ void GnssInsFilter::ProcessData(const ImuData &imu, const GnssData &gnss) {
 void GnssInsFilter::PrintState() const {
     _ins.PrintState();
 }
+
+std::tuple<const double *, const double *, Eigen::Quaterniond> GnssInsFilter::getState() const {
+    return _ins.getState();
+}

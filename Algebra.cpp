@@ -1,8 +1,9 @@
 //
 // Created by 崔宇璐 on 2023/5/16.
 //
-
+#ifdef _WIN32
 #include <corecrt_math_defines.h>
+#endif
 #include "Algebra.h"
 
 Utility::EulerAngle Utility::MatrixToEulerAngle(const Eigen::Matrix3d &DCM) {
@@ -65,6 +66,14 @@ Eigen::Quaterniond Utility::EulerAngleToQuaternion(const Utility::EulerAngle& eu
                          cosphi * sinthe * cospsi + sinphi * costhe * sinpsi,
                          cosphi * costhe * sinpsi - sinphi * sinthe * cospsi);
     return q;
+}
+
+Utility::EulerAngle &Utility::EulerAngle::operator=(const Utility::EulerAngle &other) {
+    if (&other == this) return *this;
+    this->pitch = other.pitch;
+    this->roll = other.roll;
+    this->yaw = other.yaw;
+    return *this;
 }
 
 Utility::EulerAngle &Utility::EulerAngle::operator+=(const Utility::EulerAngle &other) {

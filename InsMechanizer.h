@@ -17,8 +17,8 @@ public:
     void Initialize(const double* pos, const double* vel, const Eigen::Quaterniond& att, const ImuData& imu);
     void INSUpdate(const ImuData& data);
     void PrintState() const;
+    std::tuple<const double *, const double *, Eigen::Quaterniond> getState() const;
     double getTimeInterval(double curr_time) const;
-    std::string getStateInfo() const;
     void Correct(const Eigen::Vector3d &dp, const Eigen::Vector3d &dv, const Eigen::Quaterniond &dq);
 private:
     void positionUpdate(const ImuData &curr_imu, const double *curr_vel, double *pos);
