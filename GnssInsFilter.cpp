@@ -35,6 +35,8 @@ void GnssInsFilter::Initialize(const std::pair<const double *, const double *> &
     std0.segment(18, 3) = Eigen::Vector3d(as_std[0], as_std[1], as_std[2]);
     _P = std0.asDiagonal();
     _P *= _P;
+
+    _zupt.WindowMoveOn(imu);
 }
 
 void GnssInsFilter::setMarkovTime(double Tgb, double Tab, double Tgs, double Tas) {
@@ -169,14 +171,15 @@ GnssInsFilter::Fdim GnssInsFilter::buildF(const ImuData &imu, double dt) const {
     return F;
 }
 
-GnssInsFilter::Hdim GnssInsFilter::buildH(const ImuData &imu, double dt) const {
+GnssInsFilter::Hdim<6> GnssInsFilter::buildH(const ImuData &imu, double dt) const {
+    using _Hdim = Hdim<6>;
     auto ang = imu.getGyro();
     Eigen::Vector3d omg_ibb{ ang[0], ang[1], ang[2] };
     omg_ibb /= dt;
     const auto &att = _ins.getAtt();
     const auto *pos = _ins.getPos();
     const auto *vel = _ins.getVel();
-    GnssInsFilter::Hdim H{ GnssInsFilter::Hdim::Zero() };
+    _Hdim H{ _Hdim::Zero() };
 
     Eigen::Matrix<double, 3, 21> Hr = Eigen::Matrix<double, 3, 21>::Zero();
     Eigen::Vector3d lb{ _lever[0], _lever[1], _lever[2] };
@@ -240,9 +243,10 @@ void GnssInsFilter::setRandomWalk(double ARW, double VRW) {
     _VRW = VRW;
 }
 
-GnssInsFilter::zdim GnssInsFilter::buildz(const ImuData &imu, const GnssData &gnss, double dt) const {
+GnssInsFilter::zdim<6> GnssInsFilter::buildz(const ImuData &imu, const GnssData &gnss, double dt) const {
+    using _zdim = zdim<6>;
     Eigen::Vector3d lb{ _lever[0], _lever[1], _lever[2] };
-    GnssInsFilter::zdim z{ GnssInsFilter::zdim::Zero() };
+    _zdim z{ _zdim::Zero() };
     auto ang = imu.getGyro();
     const auto *i_pos = _ins.getPos();
     const auto *g_pos = gnss.getBlh();
@@ -267,29 +271,39 @@ GnssInsFilter::zdim GnssInsFilter::buildz(const ImuData &imu, const GnssData &gn
     return z;
 }
 
-GnssInsFilter::Rdim GnssInsFilter::buildR(const GnssData &gnss) const {
+GnssInsFilter::Rdim<6> GnssInsFilter::buildR(const GnssData &gnss) const {
+    using _Rdim = Rdim<6>;
     const auto *blh_std = gnss.getBlhStd();
     const auto *vel_std = gnss.getVelStd();
     Eigen::Vector<double, 6> R1{ pow(blh_std[0], 2), pow(blh_std[1], 2), pow(blh_std[2], 2),
                                  pow(vel_std[0], 2), pow(vel_std[1], 2), pow(vel_std[2], 2) };
-    GnssInsFilter::Rdim R = R1.asDiagonal();
+    _Rdim R = R1.asDiagonal();
     return R;
 }
 
 void GnssInsFilter::ProcessData(const ImuData &imu, const GnssData &gnss) {
     auto curr_imu = imu;
     double dt = _ins.getTimeInterval(curr_imu.getSecond());
+    auto prev_euler = QuaternionToEulerAngle(_ins.getAtt());
     curr_imu.Compensate(_gb, _ab, _gs, _as);
     _ins.INSUpdate(curr_imu);
     auto F = this->buildF(curr_imu, dt);
     auto Q = this->buildQ(F, dt);
     this->KFPredict(F, Q, dt);
     this->setX(GnssInsFilter::xdim::Zero());
-    if (fabs(imu.getSecond() - gnss.getSecond()) > 1.0E-9) return;
-    auto z = this->buildz(imu, gnss, dt);
-    auto H = this->buildH(imu, dt);
-    auto R = this->buildR(gnss);
-    this->KFUpdate(z, H, R, dt);
+    if (fabs(imu.getSecond() - gnss.getSecond()) < 1.0E-9) { // GNSS
+        auto z = this->buildz(imu, gnss, dt);
+        auto H = this->buildH(imu, dt);
+        auto R = this->buildR(gnss);
+        this->KFUpdate<6>(z, H, R, dt);
+    }
+    if (_zupt.WindowMoveOn(curr_imu), _zupt.isZeroUpdate()) { // ZUPT
+        auto curr_euler = QuaternionToEulerAngle(_ins.getAtt());
+        auto z = this->ZeroBuildz(curr_imu, prev_euler, curr_euler, dt);
+        auto H = this->ZeroBuildH(curr_imu, curr_euler, dt);
+        auto R = this->ZeroBuildR();
+        this->KFUpdate<7>(z, H, R, dt);
+    }
     // Correct position, velocity, attitude and device parameter
     const auto *pos = _ins.getPos();
     double R_M = getRM(pos[0]);
@@ -320,4 +334,35 @@ void GnssInsFilter::PrintState() const {
 
 std::tuple<const double *, const double *, Eigen::Quaterniond> GnssInsFilter::getState() const {
     return _ins.getState();
+}
+
+bool GnssInsFilter::isZeroUpdate() const {
+    return _zupt.isZeroUpdate();
+}
+
+GnssInsFilter::zdim<7>
+GnssInsFilter::ZeroBuildz(const ImuData &imu, const EulerAngle &prev_euler, const EulerAngle &curr_euler, double dt) const {
+    using _zdim = GnssInsFilter::zdim<7>;
+    const auto *vel = _ins.getVel();
+    const auto &gyro = imu.getGyro();
+    double yaw_rate = (curr_euler.yaw - prev_euler.yaw) / dt;
+    _zdim z;
+    z << vel[0], vel[1], vel[2], yaw_rate, gyro(0), gyro(1), gyro(2);
+    return z;
+}
+
+GnssInsFilter::Hdim<7> GnssInsFilter::ZeroBuildH(const ImuData &imu, const EulerAngle &euler, double dt) const {
+    using _Hdim = GnssInsFilter::Hdim<7>;
+    _Hdim H = _Hdim::Zero();
+    Eigen::Matrix<double, 1, 3> H_psi;
+    H_psi << 0, sin(euler.roll) / cos(euler.pitch), cos(euler.roll) / cos(euler.pitch);
+    H.block(0, 3, 3, 3) = Eigen::Matrix3d::Identity();
+    H.block(3, 9, 1, 3) = H_psi;
+    H.block(4, 9, 3, 3) = Eigen::Matrix3d::Identity();
+    H.block(4, 15, 3, 3) = Eigen::Matrix3d::Identity();
+    return H;
+}
+
+GnssInsFilter::Rdim<7> GnssInsFilter::ZeroBuildR() const {
+    return GnssInsFilter::Rdim<7>::Identity();
 }

@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <chrono>
 #include <Eigen/Dense>
@@ -13,7 +14,7 @@
 using namespace Utility;
 using namespace std::chrono;
 
-constexpr char conf_file[]{ "..//conf.ini" };
+constexpr char conf_file[]{ ".//conf.ini" };
 constexpr double max_gap{ 0.011 };
 
 void ReadIMUFile(const std::string &filename, std::vector<ImuData>& imu_data) {
@@ -29,6 +30,8 @@ void ReadIMUFile(const std::string &filename, std::vector<ImuData>& imu_data) {
         if (dt > max_gap && dt < 1.0)
             imu_data.push_back(ImuData::Interpolate(prev_imu, curr_imu, prev_imu.getSecond() + 0.01));
         imu_data.emplace_back(curr_imu);
+        Eigen::Vector3d gyro = curr_imu.getGyro() * ImuData::getFrequency();
+        Eigen::Vector3d accl = curr_imu.getAccl() * ImuData::getFrequency();
     }
     ifs.close();
 }
@@ -69,6 +72,7 @@ void INSMechanize(const std::vector<ImuData>& imu_data,
 
 void ReadPosFile(const std::string &filename, std::vector<GnssData>& pos_results) {
     std::ifstream ifs{ filename, std::ios::in };
+    std::ofstream ofs{ "..//Data//open.csv", std::ios::out };
     if (!ifs.is_open()) return;
     std::string line;
     GnssData pos_result;
@@ -76,6 +80,9 @@ void ReadPosFile(const std::string &filename, std::vector<GnssData>& pos_results
     while (getline(ifs, line)) {
         pos_result.Parse(line);
         pos_results.push_back(pos_result);
+        ofs << std::fixed << std::setprecision(9)
+            << R2D(pos_result.getBlh()[0]) << "," << R2D(pos_result.getBlh()[1]) << "," << pos_result.getBlh()[2] << ","
+            << pos_result.getVel()[0] << "," << pos_result.getVel()[1] << "," << pos_result.getVel()[2] << "\n";
     }
     ifs.close();
 }
@@ -128,8 +135,8 @@ void LooselyCouple(const std::vector<ImuData> &imu_data, const std::vector<GnssD
             ofs << std::fixed << std::setprecision(3) << i_time << ","
                 << std::setprecision(9) << R2D(p[0]) << "," << R2D(p[1]) << "," << p[2] << ","
                 << std::setprecision(6) << v[0] << "," << v[1] << "," << v[2] << ","
-                << std::setprecision(3) << R2D(euler.roll) << "," << R2D(euler.pitch) << "," << R2D(euler.yaw)
-                << "\r\n";
+                << std::setprecision(3) << R2D(euler.roll) << "," << R2D(euler.pitch) << "," << R2D(euler.yaw) << ","
+                << filter.isZeroUpdate() << "\n";
         }
     }
     filter.PrintState();
@@ -142,10 +149,10 @@ int main() {
     imu_data.reserve(150000);
     std::vector<GnssData> pos_results;
     ReadPosFile(conf.input_gnss, pos_results);
-    auto start = system_clock::now(); // timing
+    auto start = system_clock::now();                                 // timing
     ReadIMUFile(conf.input_imu, imu_data);
     LooselyCouple(imu_data, pos_results, conf);
-    auto end = system_clock::now(); // timing
-    auto duration = duration_cast<seconds>(end - start); // timing
-    std::cout << "duration: " << duration.count() << " seconds" << std::endl; // timing
+    auto end = system_clock::now();                                   // timing
+    auto duration = duration_cast<seconds>(end - start);    // timing
+    std::cout << "duration: " << duration.count() << " seconds" << std::endl;       // timing
 }

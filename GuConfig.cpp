@@ -43,6 +43,7 @@ void GuConfig::ParseConfig(const std::string &conf_file) {
     init_std_gs[0] = init_std_gs[1] = init_std_gs[2] = ini.getf("Public", "init_std_gs");
     init_std_as[0] = init_std_as[1] = init_std_as[2] = ini.getf("Public", "init_std_as");
     // Other important parameter
+    is_ZUPT = ini.getbool("Public", "is_ZUPT", false);
     lever[0] = ini.getf("Public", "lever_x");
     lever[1] = ini.getf("Public", "lever_y");
     lever[2] = ini.getf("Public", "lever_z");

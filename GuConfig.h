@@ -26,6 +26,7 @@ public:
     double init_std_ab[3];
     double init_std_gs[3];
     double init_std_as[3];
+    bool is_ZUPT;
     double lever[3];
     double ARW;
     double VRW;

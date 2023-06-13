@@ -28,6 +28,7 @@ public: // Getter
     double getSecond() const;
     Eigen::Vector3d getAccl() const;
     Eigen::Vector3d getGyro() const;
+    static const int getFrequency();
 private:
     static constexpr int _frequency{ 100 };
     static constexpr double _gyro_scale{ 0.1 / (3600.0 * 256.0) };

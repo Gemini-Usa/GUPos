@@ -163,3 +163,7 @@ void ImuData::Compensate(const double *gb, const double *ab, const double *gs, c
         _accl[i] = (_accl[i] - ab[i]) / (1.0 + as[i]);
     }
 }
+
+const int ImuData::getFrequency() {
+    return _frequency;
+}
