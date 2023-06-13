@@ -33,9 +33,12 @@ private:
     static void setF_Anginn(Fdim &F, double vn, double ve, double phi, double h);
     Fdim buildF(const ImuData &imu, double dt) const;
     Qdim buildQ(const Fdim &F, double dt) const;
-    Hdim<6> buildH(const ImuData &imu, double dt) const;
-    zdim<6> buildz(const ImuData &imu, const GnssData &gnss, double dt) const;
-    Rdim<6> buildR(const GnssData &gnss) const;
+    Hdim<3> PosBuildH(const ImuData &imu, double dt) const;
+    zdim<3> PosBuildz(const ImuData &imu, const GnssData &gnss, double dt) const;
+    Rdim<3> PosBuildR(const GnssData &gnss) const;
+    Hdim<6> GnssBuildH(const ImuData &imu, double dt) const;
+    zdim<6> GnssBuildz(const ImuData &imu, const GnssData &gnss, double dt) const;
+    Rdim<6> GnssBuildR(const GnssData &gnss) const;
     Hdim<7> ZeroBuildH(const ImuData &imu, const Utility::EulerAngle &euler, double dt) const;
     zdim<7> ZeroBuildz(const ImuData &imu, const Utility::EulerAngle &prev_euler, const Utility::EulerAngle &curr_euler, double dt) const;
     Rdim<7> ZeroBuildR() const;

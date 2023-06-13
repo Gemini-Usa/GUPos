@@ -3,24 +3,22 @@
 //
 
 #include <string>
+#include <memory>
 #include <vector>
 #include <Eigen/Dense>
 #include "ImuData.h"
 #include "Algebra.h"
 #include "Geodesy.h"
+#include "String.h"
 
 using namespace Eigen;
 using namespace Utility;
 
-void SplitString(const std::string& str, std::vector<std::string>& substr, const std::string& split) {
-    std::string str0;
-    for (auto c : str) {
-        if (split.find(c) == std::string::npos) str0.push_back(c);
-        else { substr.push_back(str0); str0.clear(); }
-    }
-}
+int ImuData::_rate = 100;
+double ImuData::_gyro_scale = 0.1 / (3600.0 * 256.0);
+double ImuData::_accl_scale = 0.05 / 32768.0;
 
-bool ImuData::ParseASC(const std::string &str) {
+bool ImuData::ParseAsc(const std::string &str) {
     std::string split{ "," };
     split += ";";
     split += "*";
@@ -28,13 +26,29 @@ bool ImuData::ParseASC(const std::string &str) {
     SplitString(str, substr, split);
     if (substr[0] != "%RAWIMUSA") return false;
     this->_second = std::stod(substr[2]);
-    this->_accl[0] = -std::stod(substr[7]) * _accl_scale * _frequency;
-    this->_accl[1] = std::stod(substr[8]) * _accl_scale * _frequency;
-    this->_accl[2] = -std::stod(substr[6]) * _accl_scale * _frequency;
-    this->_gyro[0] = -std::stod(substr[10]) * _gyro_scale * _frequency;
-    this->_gyro[1] = std::stod(substr[11]) * _gyro_scale * _frequency;
-    this->_gyro[2] = -std::stod(substr[9]) * _gyro_scale * _frequency;
+    this->_accl[0] = -std::stod(substr[7]) * _accl_scale * _rate;
+    this->_accl[1] = std::stod(substr[8]) * _accl_scale * _rate;
+    this->_accl[2] = -std::stod(substr[6]) * _accl_scale * _rate;
+    this->_gyro[0] = -std::stod(substr[10]) * _gyro_scale * _rate;
+    this->_gyro[1] = std::stod(substr[11]) * _gyro_scale * _rate;
+    this->_gyro[2] = -std::stod(substr[9]) * _gyro_scale * _rate;
     return true;
+}
+
+void ImuData::ParseImrHeader(const char *header) {
+    ImuData::_rate = static_cast<int>(*reinterpret_cast<double*>((char*)header + 25));
+    ImuData::_gyro_scale = 100 * D2R(*reinterpret_cast<double*>((char*)header + 33));
+    ImuData::_accl_scale = *reinterpret_cast<double*>((char*)header + 41) * 100;
+}
+
+void ImuData::ParseImr(const char *str) {
+    _second = *reinterpret_cast<double*>((char*)str);
+    _gyro[1] = _gyro_scale * static_cast<double>(*reinterpret_cast<int*>((char*)str + 8));
+    _gyro[0] = _gyro_scale * static_cast<double>(*reinterpret_cast<int*>((char*)str + 12));
+    _gyro[2] = -_gyro_scale * static_cast<double>(*reinterpret_cast<int*>((char*)str + 16));
+    _accl[1] = _accl_scale * static_cast<double>(*reinterpret_cast<int*>((char*)str + 20));
+    _accl[0] = _accl_scale * static_cast<double>(*reinterpret_cast<int*>((char*)str + 24));
+    _accl[2] = -_accl_scale * static_cast<double>(*reinterpret_cast<int*>((char*)str + 28));
 }
 
 bool ImuData::isDuplicated(const ImuData &other) const {
@@ -115,11 +129,11 @@ ImuData &ImuData::operator/=(int num) {
 }
 
 Eigen::Vector3d ImuData::getAccl() const {
-    return Eigen::Vector3d{ _accl[0], _accl[1], _accl[2] } / _frequency;
+    return Eigen::Vector3d{ _accl[0], _accl[1], _accl[2] } / _rate;
 }
 
 Eigen::Vector3d ImuData::getGyro() const {
-    return Eigen::Vector3d{ _gyro[0], _gyro[1], _gyro[2] } / _frequency;
+    return Eigen::Vector3d{ _gyro[0], _gyro[1], _gyro[2] } / _rate;
 }
 
 ImuData ImuData::Interpolate(const ImuData &prev_imu, const ImuData &curr_imu, double time) {
@@ -164,6 +178,6 @@ void ImuData::Compensate(const double *gb, const double *ab, const double *gs, c
     }
 }
 
-const int ImuData::getFrequency() {
-    return _frequency;
+int ImuData::getRate() {
+    return _rate;
 }

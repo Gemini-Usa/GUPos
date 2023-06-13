@@ -17,6 +17,8 @@ namespace Utility {
     double getRM(double phi);
     double getRN(double phi);
     double getLocalGravity(double phi, double h);
+    void BlhToNed(const double *blh, const double *blh0, double *ned);
+    void BlhToXyz(const double *blh, double *xyz);
     Eigen::Vector3d getAng_ienVec(double phi);
     Eigen::Vector3d getAng_ennVec(double phi, double h, double vn, double ve);
     Eigen::Vector3d getAng_innVec(double phi, double h, double vn, double ve);

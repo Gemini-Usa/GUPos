@@ -18,7 +18,9 @@ public:
     ImuData& operator=(const ImuData& other);
     ImuData& operator+=(const ImuData& other);
     ImuData& operator/=(int num);
-    bool ParseASC(const std::string& str);
+    bool ParseAsc(const std::string &str);
+    static void ParseImrHeader(const char *header);
+    void ParseImr(const char *str);
     bool isDuplicated(const ImuData& other) const;
     void SmoothBy(const std::deque<ImuData> &dataset);
     void StaticAlignment(const double *blh, Utility::EulerAngle &att) const;
@@ -28,11 +30,11 @@ public: // Getter
     double getSecond() const;
     Eigen::Vector3d getAccl() const;
     Eigen::Vector3d getGyro() const;
-    static const int getFrequency();
+    static int getRate();
 private:
-    static constexpr int _frequency{ 100 };
-    static constexpr double _gyro_scale{ 0.1 / (3600.0 * 256.0) };
-    static constexpr double _accl_scale{ 0.05 / 32768.0 };
+    static int _rate;
+    static double _gyro_scale;
+    static double _accl_scale;
     double _second{ 0.0 };
     double _accl[3]{ 0.0, 0.0, 0.0 };
     double _gyro[3]{ 0.0, 0.0, 0.0 };

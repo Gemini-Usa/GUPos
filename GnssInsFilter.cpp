@@ -171,7 +171,7 @@ GnssInsFilter::Fdim GnssInsFilter::buildF(const ImuData &imu, double dt) const {
     return F;
 }
 
-GnssInsFilter::Hdim<6> GnssInsFilter::buildH(const ImuData &imu, double dt) const {
+GnssInsFilter::Hdim<6> GnssInsFilter::GnssBuildH(const ImuData &imu, double dt) const {
     using _Hdim = Hdim<6>;
     auto ang = imu.getGyro();
     Eigen::Vector3d omg_ibb{ ang[0], ang[1], ang[2] };
@@ -243,7 +243,7 @@ void GnssInsFilter::setRandomWalk(double ARW, double VRW) {
     _VRW = VRW;
 }
 
-GnssInsFilter::zdim<6> GnssInsFilter::buildz(const ImuData &imu, const GnssData &gnss, double dt) const {
+GnssInsFilter::zdim<6> GnssInsFilter::GnssBuildz(const ImuData &imu, const GnssData &gnss, double dt) const {
     using _zdim = zdim<6>;
     Eigen::Vector3d lb{ _lever[0], _lever[1], _lever[2] };
     _zdim z{ _zdim::Zero() };
@@ -271,7 +271,7 @@ GnssInsFilter::zdim<6> GnssInsFilter::buildz(const ImuData &imu, const GnssData 
     return z;
 }
 
-GnssInsFilter::Rdim<6> GnssInsFilter::buildR(const GnssData &gnss) const {
+GnssInsFilter::Rdim<6> GnssInsFilter::GnssBuildR(const GnssData &gnss) const {
     using _Rdim = Rdim<6>;
     const auto *blh_std = gnss.getBlhStd();
     const auto *vel_std = gnss.getVelStd();
@@ -291,10 +291,10 @@ void GnssInsFilter::ProcessData(const ImuData &imu, const GnssData &gnss) {
     auto Q = this->buildQ(F, dt);
     this->KFPredict(F, Q, dt);
     this->setX(GnssInsFilter::xdim::Zero());
-    if (fabs(imu.getSecond() - gnss.getSecond()) < 1.0E-9) { // GNSS
-        auto z = this->buildz(imu, gnss, dt);
-        auto H = this->buildH(imu, dt);
-        auto R = this->buildR(gnss);
+    if (fabs(imu.getSecond() - gnss.getSecond()) < 1.0E-3) { // GNSS
+        auto z = this->GnssBuildz(imu, gnss, dt);
+        auto H = this->GnssBuildH(imu, dt);
+        auto R = this->GnssBuildR(gnss);
         this->KFUpdate<6>(z, H, R, dt);
     }
     if (_zupt.WindowMoveOn(curr_imu), _zupt.isZeroUpdate()) { // ZUPT
@@ -364,5 +364,53 @@ GnssInsFilter::Hdim<7> GnssInsFilter::ZeroBuildH(const ImuData &imu, const Euler
 }
 
 GnssInsFilter::Rdim<7> GnssInsFilter::ZeroBuildR() const {
-    return GnssInsFilter::Rdim<7>::Identity();
+    return GnssInsFilter::Rdim<7>::Identity() * 1.0e-4;
+}
+
+GnssInsFilter::Hdim<3> GnssInsFilter::PosBuildH(const ImuData &imu, double dt) const {
+    using _Hdim = GnssInsFilter::Hdim<3>;
+    auto ang = imu.getGyro();
+    Eigen::Vector3d omg_ibb{ ang[0], ang[1], ang[2] };
+    omg_ibb /= dt;
+    const auto &att = _ins.getAtt();
+    const auto *pos = _ins.getPos();
+    const auto *vel = _ins.getVel();
+    _Hdim H{ _Hdim::Zero() };
+
+    Eigen::Matrix<double, 3, 21> Hr = Eigen::Matrix<double, 3, 21>::Zero();
+    Eigen::Vector3d lb{ _lever[0], _lever[1], _lever[2] };
+    Hr.block(0, 0, 3, 3) = Eigen::Matrix<double, 3, 3>::Identity();
+    Hr.block(0, 6, 3, 3) = SkewSymmetric(att.toRotationMatrix() * lb);
+    H.block(0, 0, 3, 21) = Hr;
+
+    return H;
+}
+
+GnssInsFilter::zdim<3> GnssInsFilter::PosBuildz(const ImuData &imu, const GnssData &gnss, double dt) const {
+    using _zdim = GnssInsFilter::zdim<3>;
+    Eigen::Vector3d lb{ _lever[0], _lever[1], _lever[2] };
+    _zdim z{ _zdim::Zero() };
+    auto ang = imu.getGyro();
+    const auto *i_pos = _ins.getPos();
+    const auto *g_pos = gnss.getBlh();
+    const auto *i_vel = _ins.getVel();
+    const auto *g_vel = gnss.getVel();
+    const auto &Cb_n = _ins.getAtt();
+    Eigen::Vector3d omg_ibb{ ang[0], ang[1], ang[2] };
+    omg_ibb /= dt;
+    // position observation
+    Eigen::Vector3d r_G(g_pos[0], g_pos[1], g_pos[2]);
+    Eigen::Matrix3d invD_R = getInv_DR(i_pos[0], i_pos[2]);
+    Eigen::Vector3d hatr_I(i_pos[0], i_pos[1], i_pos[2]);
+    Eigen::Vector3d hatr_G = hatr_I + invD_R * Cb_n * lb;
+    z = invD_R.inverse() * (hatr_G - r_G);
+    return z;
+}
+
+GnssInsFilter::Rdim<3> GnssInsFilter::PosBuildR(const GnssData &gnss) const {
+    using _Rdim = GnssInsFilter::Rdim<3>;
+    const auto *blh_std = gnss.getBlhStd();
+    Eigen::Vector<double, 3> R1{ pow(blh_std[0], 2), pow(blh_std[1], 2), pow(blh_std[2], 2) };
+    _Rdim R = R1.asDiagonal();
+    return R;
 }

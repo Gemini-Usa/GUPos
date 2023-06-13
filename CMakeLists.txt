@@ -27,7 +27,7 @@ set(SOURCE_FILES
         KalmanFilter.hpp
         minIni.c
         minIni.h
-        minGlue.h GuConfig.cpp GuConfig.h ZeroDetector.cpp ZeroDetector.h)
+        minGlue.h GuConfig.cpp GuConfig.h ZeroDetector.cpp ZeroDetector.h String.cpp String.h)
 
 # Add executable target with source files listed in SOURCE_FILES variable
 add_executable(GUPos ${SOURCE_FILES})

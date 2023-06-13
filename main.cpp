@@ -10,30 +10,83 @@
 #include "GnssData.h"
 #include "GnssInsFilter.h"
 #include "GuConfig.h"
+#include "String.h"
 
 using namespace Utility;
 using namespace std::chrono;
 
-constexpr char conf_file[]{ ".//conf.ini" };
+constexpr char conf_file[]{ "..//conf.ini" };
 constexpr double max_gap{ 0.011 };
 
-void ReadIMUFile(const std::string &filename, std::vector<ImuData>& imu_data) {
-    std::ifstream ifs{ filename, std::ios::in };
+struct TrueResult {
+    double second{ 0.0 };
+    double blh[3]{ 0.0 };
+    double vel[3]{ 0.0 };
+    EulerAngle att{};
+};
+
+void ReadTrueResult(std::vector<TrueResult> &res, const std::string &file_name) {
+    std::ifstream ifs{ file_name, std::ios::in };
     if (!ifs.is_open()) return;
     std::string line;
-    ImuData curr_imu, prev_imu;
+    std::vector<std::string> substr;
+    TrueResult r;
     while (getline(ifs, line)) {
-        prev_imu = curr_imu;
-        if (!curr_imu.ParseASC(line)) continue;
-        if (curr_imu.isDuplicated(prev_imu)) continue;
-        double dt = curr_imu.getSecond() - prev_imu.getSecond();
-        if (dt > max_gap && dt < 1.0)
-            imu_data.push_back(ImuData::Interpolate(prev_imu, curr_imu, prev_imu.getSecond() + 0.01));
-        imu_data.emplace_back(curr_imu);
-        Eigen::Vector3d gyro = curr_imu.getGyro() * ImuData::getFrequency();
-        Eigen::Vector3d accl = curr_imu.getAccl() * ImuData::getFrequency();
+        RemoveSpace(line);
+        SplitString(line, substr, " ");
+        r.second = stod(substr[1]);
+        r.blh[0] = D2R(stod(substr[2]));
+        r.blh[1] = D2R(stod(substr[3]));
+        r.blh[2] = stod(substr[4]);
+        r.vel[0] = stod(substr[6]);
+        r.vel[1] = stod(substr[5]);
+        r.vel[2] = -stod(substr[7]);
+        r.att.yaw = D2R(stod(substr[8]));
+        r.att.roll = D2R(stod(substr[10]));
+        r.att.pitch = D2R(stod(substr[9]));
+        res.push_back(r);
+        substr.clear();
     }
     ifs.close();
+}
+
+void ReadIMUFile(const std::string &filename, std::vector<ImuData>& imu_data) {
+    if (filename.find(".ASC") != std::string::npos) {
+        std::ifstream ifs{filename, std::ios::in};
+        if (!ifs.is_open()) return;
+        std::string line;
+        ImuData curr_imu, prev_imu;
+        while (getline(ifs, line)) {
+            prev_imu = curr_imu;
+            if (!curr_imu.ParseAsc(line)) continue;
+            if (curr_imu.isDuplicated(prev_imu)) continue;
+            double dt = curr_imu.getSecond() - prev_imu.getSecond();
+            if (dt > max_gap && dt < 1.0)
+                imu_data.push_back(ImuData::Interpolate(prev_imu, curr_imu, prev_imu.getSecond() + 0.01));
+            imu_data.emplace_back(curr_imu);
+        }
+        ifs.close();
+    } else if (filename.find(".imr") != std::string::npos) {
+        std::ifstream ifs{ filename, std::ios::in | std::ios::binary };
+        if (!ifs.is_open()) return;
+        char header[512];
+        ifs.read(header, 512);
+        ImuData::ParseImrHeader(header);
+        char buffer[32];
+        ImuData curr_imu, prev_imu;
+        while (ifs.read(buffer, 32)) {
+            prev_imu = curr_imu;
+            curr_imu.ParseImr(buffer);
+            if (curr_imu.isDuplicated(prev_imu)) continue;
+            double dt = curr_imu.getSecond() - prev_imu.getSecond();
+            if (dt > max_gap && dt < 1.0)
+                imu_data.push_back(ImuData::Interpolate(prev_imu, curr_imu, prev_imu.getSecond() + 0.01));
+            imu_data.emplace_back(curr_imu);
+        }
+        ifs.close();
+    } else {
+        return;
+    }
 }
 
 EulerAngle initialAlignment(const std::vector<ImuData>& imu_data, const double *initial_pos, double start_time = -1, double end_time = -1) {
@@ -72,7 +125,6 @@ void INSMechanize(const std::vector<ImuData>& imu_data,
 
 void ReadPosFile(const std::string &filename, std::vector<GnssData>& pos_results) {
     std::ifstream ifs{ filename, std::ios::in };
-    std::ofstream ofs{ "..//Data//open.csv", std::ios::out };
     if (!ifs.is_open()) return;
     std::string line;
     GnssData pos_result;
@@ -80,14 +132,11 @@ void ReadPosFile(const std::string &filename, std::vector<GnssData>& pos_results
     while (getline(ifs, line)) {
         pos_result.Parse(line);
         pos_results.push_back(pos_result);
-        ofs << std::fixed << std::setprecision(9)
-            << R2D(pos_result.getBlh()[0]) << "," << R2D(pos_result.getBlh()[1]) << "," << pos_result.getBlh()[2] << ","
-            << pos_result.getVel()[0] << "," << pos_result.getVel()[1] << "," << pos_result.getVel()[2] << "\n";
     }
     ifs.close();
 }
 
-void LooselyCouple(const std::vector<ImuData> &imu_data, const std::vector<GnssData> &gnss_data, const GuConfig &conf) {
+void LooselyCouple(const std::vector<ImuData> &imu_data, const std::vector<GnssData> &gnss_data, const std::vector<TrueResult> &true_results, const GuConfig &conf) {
     GnssInsFilter filter;
     std::ofstream ofs{ conf.output, std::ios::out };
     // Initial Alignment, get initial position, velocity and attitude
@@ -112,31 +161,43 @@ void LooselyCouple(const std::vector<ImuData> &imu_data, const std::vector<GnssD
     filter.setMarkovTime(conf.markov_time, conf.markov_time, conf.markov_time, conf.markov_time);
     filter.setRandomWalk(conf.ARW, conf.VRW);
     // Time Synchronize
-    double i_time, g_time;
-    int i = 0, k = 0;
+    double i_time, g_time, r_time;
+    int i = 0, k = 0, n = 0;
     while(fabs(imu_data.at(i).getSecond() - toe) > 1.0E-3) ++i;
     while(gnss_data.at(k).getSecond() < toe) ++k;
     filter.Initialize(pos, vel, att, gb, ab, gs, as, imu_data.at(i));
     for (++i; i < imu_data.size(); ++i) {
-        if (k == gnss_data.size()) break;
+        if (k == gnss_data.size() || n == true_results.size()) break;
         i_time = imu_data.at(i).getSecond();
         g_time = gnss_data.at(k).getSecond();
+        r_time = true_results.at(n).second;
         if (g_time < i_time && fabs(g_time - i_time) > 1.0E-3) {
             ImuData inter_imu = ImuData::Interpolate(imu_data.at(i - 1), imu_data.at(i), g_time);
             filter.ProcessData(inter_imu, gnss_data.at(k++));
-        } else if (fabs(g_time - i_time) < 1.0E-9) {
+        } else if (fabs(g_time - i_time) < 1.0E-3) {
             filter.ProcessData(imu_data.at(i), gnss_data.at(k++));
         } else {
             filter.ProcessData(imu_data.at(i));
         }
         auto [p, v, a] = filter.getState();
         auto euler = QuaternionToEulerAngle(a);
-        if (ofs.is_open()) {
+        double ned[3];
+        BlhToNed(p, conf.init_pos, ned);
+        if (ofs.is_open() && fabs(r_time - i_time) < 1.0E-3) {
+            const auto ref = true_results.at(n);
+            double ref_ned[3];
+            BlhToNed(ref.blh, conf.init_pos, ref_ned);
+            double d_yaw = R2D(ref.att.yaw - euler.yaw);
+            if (d_yaw < -350) d_yaw = M_PI * 2;
+            else if (d_yaw > 350) d_yaw = -M_PI * 2;
+            else d_yaw = 0;
             ofs << std::fixed << std::setprecision(3) << i_time << ","
-                << std::setprecision(9) << R2D(p[0]) << "," << R2D(p[1]) << "," << p[2] << ","
-                << std::setprecision(6) << v[0] << "," << v[1] << "," << v[2] << ","
-                << std::setprecision(3) << R2D(euler.roll) << "," << R2D(euler.pitch) << "," << R2D(euler.yaw) << ","
+                << std::setprecision(9) << ref_ned[0] - ned[0] << "," << ref_ned[1] - ned[1] << "," << ref_ned[2] - ned[2] << ","
+                << std::setprecision(6) << ref.vel[0] - v[0] << "," << ref.vel[1] - v[1] << "," << ref.vel[2] - v[2] << ","
+                << std::setprecision(3) << R2D(ref.att.roll - euler.roll) << "," << R2D(ref.att.pitch - euler.pitch) << "," << R2D(d_yaw + ref.att.yaw - euler.yaw)
+                << ","
                 << filter.isZeroUpdate() << "\n";
+            ++n;
         }
     }
     filter.PrintState();
@@ -149,9 +210,11 @@ int main() {
     imu_data.reserve(150000);
     std::vector<GnssData> pos_results;
     ReadPosFile(conf.input_gnss, pos_results);
+    std::vector<TrueResult> true_results;
+    ReadTrueResult(true_results, "..//..//Data//true_open.pos");
     auto start = system_clock::now();                                 // timing
     ReadIMUFile(conf.input_imu, imu_data);
-    LooselyCouple(imu_data, pos_results, conf);
+    LooselyCouple(imu_data, pos_results, true_results, conf);
     auto end = system_clock::now();                                   // timing
     auto duration = duration_cast<seconds>(end - start);    // timing
     std::cout << "duration: " << duration.count() << " seconds" << std::endl;       // timing

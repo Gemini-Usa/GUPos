@@ -16,7 +16,7 @@ void ZeroDetector::WindowMoveOn(const ImuData &imu) {
 bool ZeroDetector::isZeroUpdate() const {
     double sum = 0.0;
     for (const auto &imu : _detector) {
-        sum += pow(imu.getGyro().norm() * ImuData::getFrequency(), 2);
+        sum += pow(imu.getGyro().norm() * ImuData::getRate(), 2);
     }
     if ((sum / static_cast<double>(_detector.size())) < _threshold) return true;
     else return false;

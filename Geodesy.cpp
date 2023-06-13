@@ -33,6 +33,31 @@ double Utility::R2D(double rad) {
     return rad * 180.0 / M_PI;
 }
 
+void Utility::BlhToXyz(const double *blh, double *xyz) {
+    double R_N = getRN(blh[0]);
+    double e2 = 2 * flat - flat * flat;
+    xyz[0] = (R_N + blh[2]) * cos(blh[0]) * cos(blh[1]);
+    xyz[1] = (R_N + blh[2]) * cos(blh[0]) * sin(blh[1]);
+    xyz[2] = (R_N * (1 - e2) + blh[2]) * sin(blh[0]);
+}
+
+void Utility::BlhToNed(const double *blh, const double *blh0, double *ned) {
+    double sin_l = sin(blh0[1]);
+    double cos_l = cos(blh0[1]);
+    double sin_b = sin(blh0[0]);
+    double cos_b = cos(blh0[0]);
+    Eigen::Matrix3d R;
+    R << -sin_b * cos_l, -sin_b * sin_l, cos_b,
+    -sin_l, cos_l, 0,
+    -cos_b * cos_l,  -cos_b * sin_l, -sin_b;
+    double xyz0[3], xyz[3];
+    BlhToXyz(blh0, xyz0);
+    BlhToXyz(blh, xyz);
+    Eigen::Vector3d d_xyz{ xyz[0] - xyz0[0], xyz[1] - xyz0[1], xyz[2] - xyz0[2] };
+    Eigen::Vector3d res = R * d_xyz;
+    for (int i = 0; i < 3; ++i) ned[i] = res(i);
+}
+
 Eigen::Vector3d Utility::getAng_ienVec(double phi) {
     Eigen::Vector3d Ang_ien;
     Ang_ien << omg_e * cos(phi), 0, -omg_e * sin(phi);
