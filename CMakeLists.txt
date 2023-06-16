@@ -12,22 +12,22 @@ endif()
 # Add main.cpp file of project root directory as source file
 set(SOURCE_FILES
         main.cpp
-        Algebra.cpp
-        Algebra.h
-        Geodesy.cpp
-        Geodesy.h
-        GnssData.cpp
-        GnssData.h
-        GnssInsFilter.cpp
-        GnssInsFilter.h
-        ImuData.cpp
-        ImuData.h
-        InsMechanizer.cpp
-        InsMechanizer.h
-        KalmanFilter.hpp
-        minIni.c
-        minIni.h
-        minGlue.h GuConfig.cpp GuConfig.h ZeroDetector.cpp ZeroDetector.h String.cpp String.h)
+        Utility/Algebra.cpp
+        Utility/Algebra.h
+        Utility/Geodesy.cpp
+        Utility/Geodesy.h
+        GUCore/GnssData.cpp
+        GUCore/GnssData.h
+        GUCore/GnssInsFilter.cpp
+        GUCore/GnssInsFilter.h
+        GUCore/ImuData.cpp
+        GUCore/ImuData.h
+        GUCore/InsMechanizer.cpp
+        GUCore/InsMechanizer.h
+        GUCore/KalmanFilter.hpp
+        Configure/minIni.c
+        Configure/minIni.h
+        Configure/minGlue.h Configure/GuConfig.cpp Configure/GuConfig.h GUCore/ZeroDetector.cpp GUCore/ZeroDetector.h Utility/String.cpp Utility/String.h)
 
 # Add executable target with source files listed in SOURCE_FILES variable
 add_executable(GUPos ${SOURCE_FILES})
