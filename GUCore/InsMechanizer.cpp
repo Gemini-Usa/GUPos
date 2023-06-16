@@ -3,8 +3,8 @@
 //
 
 #include "InsMechanizer.h"
-#include "Algebra.h"
-#include "Geodesy.h"
+#include "../Utility/Algebra.h"
+#include "../Utility/Geodesy.h"
 using namespace Utility;
 using v3 = Eigen::Vector3d;
 using qt = Eigen::Quaterniond;
@@ -18,10 +18,10 @@ void InsMechanizer::Initialize(const double *pos, const double *vel, const qt& a
     _imu_data = imu;
 }
 
-void InsMechanizer::positionUpdate(const ImuData &curr_imu, const double *curr_vel, double *pos) {
-    double t = curr_imu.getSecond() - _imu_data.getSecond();
-    double R_M = getRM(_pos[0]);
-    double R_N = getRN(_pos[0]);
+void InsMechanizer::PositionUpdate(const ImuData &curr_imu, const double *curr_vel, double *pos) {
+    double t = curr_imu.GetSecond() - _imu_data.GetSecond();
+    double R_M = GetRM(_pos[0]);
+    double R_N = GetRN(_pos[0]);
     double avg_veln = (curr_vel[0] + _vel[0]) / 2.0;
     double avg_vele = (curr_vel[1] + _vel[1]) / 2.0;
     double avg_veld = (curr_vel[2] + _vel[2]) / 2.0;
@@ -32,8 +32,8 @@ void InsMechanizer::positionUpdate(const ImuData &curr_imu, const double *curr_v
     pos[1] = _pos[1] + avg_vele * t / ((R_N + avg_h) * cos(avg_b));
 }
 
-void InsMechanizer::velocityUpdate(const ImuData &curr_imu, double *vel) {
-    double t = curr_imu.getSecond() - _imu_data.getSecond();
+void InsMechanizer::VelocityUpdate(const ImuData &curr_imu, double *vel) {
+    double t = curr_imu.GetSecond() - _imu_data.GetSecond();
     double p[3]{ _pos[0], _pos[1], _pos[2] }, v[3]{ _vel[0], _vel[1], _vel[2] };
     if (_state_queue.size() == 2) { // extrapolate
         const auto& [pprev_p, pprev_v] = _state_queue.front();
@@ -43,13 +43,13 @@ void InsMechanizer::velocityUpdate(const ImuData &curr_imu, double *vel) {
             v[i] = prev_v[i] * (3.0 / 2.0) - pprev_v[i] * 0.5;
         }
     }
-    auto curr_gyro = curr_imu.getGyro();
-    auto prev_gyro = _imu_data.getGyro();
-    auto curr_accl = curr_imu.getAccl();
-    auto prev_accl = _imu_data.getAccl();
-    v3 g_pn{ 0.0, 0.0, getLocalGravity(p[0], p[2]) };
-    v3 omg_ien = getAng_ienVec(p[0]);
-    v3 omg_enn = getAng_ennVec(p[0], p[2], v[0], v[1]);
+    auto curr_gyro = curr_imu.GetGyro();
+    auto prev_gyro = _imu_data.GetGyro();
+    auto curr_accl = curr_imu.GetAccl();
+    auto prev_accl = _imu_data.GetAccl();
+    v3 g_pn{0.0, 0.0, GetLocalGravity(p[0], p[2]) };
+    v3 omg_ien = GetAng_ienVec(p[0]);
+    v3 omg_enn = GetAng_ennVec(p[0], p[2], v[0], v[1]);
     v3 a_gc = g_pn - (2 * omg_ien + omg_enn).cross(v3{ v[0], v[1], v[2] });
     v3 dv_gn = a_gc * t;
     v3 zeta = (omg_ien + omg_enn) * t;
@@ -60,12 +60,12 @@ void InsMechanizer::velocityUpdate(const ImuData &curr_imu, double *vel) {
     for (int i = 0; i < 3; ++i) vel[i] = _vel[i] + dv_fn(i) + dv_gn(i);
 }
 
-void InsMechanizer::attitudeUpdate(const ImuData &curr_imu, Eigen::Quaterniond& att) {
-    double t = curr_imu.getSecond() - _imu_data.getSecond();
-    auto curr_gyro = curr_imu.getGyro();
-    auto prev_gyro = _imu_data.getGyro();
-    v3 omg_ien = getAng_ienVec(_pos[0]);
-    v3 omg_enn = getAng_ennVec(_pos[0], _pos[2], _vel[0], _vel[1]);
+void InsMechanizer::AttitudeUpdate(const ImuData &curr_imu, Eigen::Quaterniond& att) {
+    double t = curr_imu.GetSecond() - _imu_data.GetSecond();
+    auto curr_gyro = curr_imu.GetGyro();
+    auto prev_gyro = _imu_data.GetGyro();
+    v3 omg_ien = GetAng_ienVec(_pos[0]);
+    v3 omg_enn = GetAng_ennVec(_pos[0], _pos[2], _vel[0], _vel[1]);
     v3 phi_k = curr_gyro + prev_gyro.cross(curr_gyro) / 12.0;
     qt q_b = RotateVectorToQuaternion(phi_k);
     v3 zeta = (omg_ien + omg_enn) * t;
@@ -76,9 +76,9 @@ void InsMechanizer::attitudeUpdate(const ImuData &curr_imu, Eigen::Quaterniond& 
 void InsMechanizer::INSUpdate(const ImuData &data) {
     double curr_pos[3]{ 0.0, 0.0, 0.0 }, curr_vel[3]{ 0.0, 0.0, 0.0 };
     qt curr_att{};
-    attitudeUpdate(data, curr_att);
-    velocityUpdate(data, curr_vel);
-    positionUpdate(data, curr_vel, curr_pos);
+    AttitudeUpdate(data, curr_att);
+    VelocityUpdate(data, curr_vel);
+    PositionUpdate(data, curr_vel, curr_pos);
     for (int i = 0; i < 3; ++i) {
         _vel[i] = curr_vel[i];
         _pos[i] = curr_pos[i];
@@ -90,26 +90,26 @@ void InsMechanizer::INSUpdate(const ImuData &data) {
 }
 
 void InsMechanizer::PrintState() const {
-    printf("time %.3f\n", _imu_data.getSecond());
+    printf("time %.3f\n", _imu_data.GetSecond());
     printf("\t B: %.9f, L: %.9f, H: %.6f\n", R2D(_pos[0]), R2D(_pos[1]), _pos[2]);
     printf("\t VN: %.6f, VE: %.6f, VD: %.6f\n", _vel[0], _vel[1], _vel[2]);
     EulerAngle euler_angle = QuaternionToEulerAngle(_att);
     printf("\t roll: %.6f, pitch: %.6f, yaw: %.6f\n", R2D(euler_angle.roll), R2D(euler_angle.pitch), R2D(euler_angle.yaw));
 }
 
-double InsMechanizer::getTimeInterval(double curr_time) const {
-    return curr_time - _imu_data.getSecond();
+double InsMechanizer::GetTimeInterval(double curr_time) const {
+    return curr_time - _imu_data.GetSecond();
 }
 
-const Quaterniond &InsMechanizer::getAtt() const {
+const Quaterniond &InsMechanizer::GetAtt() const {
     return _att;
 }
 
-const double *InsMechanizer::getPos() const {
+const double *InsMechanizer::GetPos() const {
     return _pos;
 }
 
-const double *InsMechanizer::getVel() const {
+const double *InsMechanizer::GetVel() const {
     return _vel;
 }
 
@@ -121,6 +121,6 @@ void InsMechanizer::Correct(const Vector3d &dp, const Vector3d &dv, const Quater
     _att = dq * _att;
 }
 
-std::tuple<const double *, const double *, Eigen::Quaterniond> InsMechanizer::getState() const {
+std::tuple<const double *, const double *, Eigen::Quaterniond> InsMechanizer::GetState() const {
     return std::make_tuple(_pos, _vel, _att);
 }

@@ -8,7 +8,7 @@
 #include <cmath>
 #include <deque>
 #include <Eigen/Dense>
-#include "Algebra.h"
+#include "../Utility/Algebra.h"
 
 class ImuData {
 public:
@@ -21,16 +21,16 @@ public:
     bool ParseAsc(const std::string &str);
     static void ParseImrHeader(const char *header);
     void ParseImr(const char *str);
-    bool isDuplicated(const ImuData& other) const;
+    bool IsDuplicated(const ImuData& other) const;
     void SmoothBy(const std::deque<ImuData> &dataset);
     void StaticAlignment(const double *blh, Utility::EulerAngle &att) const;
     void Compensate(const double *gb, const double *ab, const double *gs, const double *as);
     static ImuData Interpolate(const ImuData& prev_imu, const ImuData& curr_imu, double time);
 public: // Getter
-    double getSecond() const;
-    Eigen::Vector3d getAccl() const;
-    Eigen::Vector3d getGyro() const;
-    static int getRate();
+    double GetSecond() const;
+    Eigen::Vector3d GetAccl() const;
+    Eigen::Vector3d GetGyro() const;
+    static int GetRate();
 private:
     static int _rate;
     static double _gyro_scale;

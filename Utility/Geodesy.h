@@ -14,15 +14,15 @@ namespace Utility {
 
     double D2R(double deg);
     double R2D(double rad);
-    double getRM(double phi);
-    double getRN(double phi);
-    double getLocalGravity(double phi, double h);
+    double GetRM(double phi);
+    double GetRN(double phi);
+    double GetLocalGravity(double phi, double h);
     void BlhToNed(const double *blh, const double *blh0, double *ned);
     void BlhToXyz(const double *blh, double *xyz);
-    Eigen::Vector3d getAng_ienVec(double phi);
-    Eigen::Vector3d getAng_ennVec(double phi, double h, double vn, double ve);
-    Eigen::Vector3d getAng_innVec(double phi, double h, double vn, double ve);
-    Eigen::Matrix3d getInv_DR(double phi, double h);
+    Eigen::Vector3d GetAng_ienVec(double phi);
+    Eigen::Vector3d GetAng_ennVec(double phi, double h, double vn, double ve);
+    Eigen::Vector3d GetAng_innVec(double phi, double h, double vn, double ve);
+    Eigen::Matrix3d GetInv_DRMat(double phi, double h);
 };
 
 

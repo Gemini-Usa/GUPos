@@ -2,6 +2,7 @@
 // Created by 崔宇璐 on 2023/6/13.
 //
 
+#include <regex>
 #include "String.h"
 
 void Utility::SplitString(const std::string& str, std::vector<std::string>& substr, const std::string& split) {
@@ -10,6 +11,8 @@ void Utility::SplitString(const std::string& str, std::vector<std::string>& subs
         if (split.find(c) == std::string::npos) str0.push_back(c);
         else { substr.push_back(str0); str0.clear(); }
     }
+    substr.push_back(str0);
+    str0.clear();
 }
 
 void Utility::RemoveSpace(std::string &str) {
@@ -29,4 +32,13 @@ void Utility::RemoveSpace(std::string &str) {
         }
     }
     str = result;
+}
+
+void Utility::SplitValueAndUnit(const std::string &input, double &value, std::string &unit) {
+    std::regex pattern(R"((\d+\.?\d*(?:[eE][-+]?\d+)?)(\D*))");
+    std::smatch match;
+    if (std::regex_search(input, match, pattern)) {
+        value = std::stod(match[1]);
+        unit = match[2];
+    }
 }

@@ -10,11 +10,11 @@
 class GnssData {
 public:
     void Parse(const std::string &str);
-    double getSecond() const;
-    const double *getBlh() const;
-    const double *getBlhStd() const;
-    const double *getVel() const;
-    const double *getVelStd() const;
+    double GetSecond() const;
+    const double *GetBlh() const;
+    const double *GetBlhStd() const;
+    const double *GetVel() const;
+    const double *GetVelStd() const;
 private:
     double _second{ 0.0 };
     double _blh[3]{ 0.0, 0.0, 0.0 };

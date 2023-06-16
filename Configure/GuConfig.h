@@ -6,10 +6,11 @@
 #define GUPOS_GUCONFIG_H
 
 #include <Eigen/Dense>
-#include "Algebra.h"
+#include "../Utility/Algebra.h"
 
 class GuConfig {
 public:
+    static double ParseValue(const std::string &qty) ;
     void ParseConfig(const std::string &conf_file);
 public:
     double init_pos[3];

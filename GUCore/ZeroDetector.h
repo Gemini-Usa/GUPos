@@ -15,7 +15,7 @@ public:
     : _window(window), _threshold(threshold)
     {}
     void WindowMoveOn(const ImuData &imu);
-    bool isZeroUpdate() const;
+    bool IsZeroUpdate() const;
 private:
     int _window{ 0 };
     double _threshold{ 0.0 };

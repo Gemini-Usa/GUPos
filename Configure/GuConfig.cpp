@@ -3,8 +3,8 @@
 //
 
 #include "GuConfig.h"
-#include "Algebra.h"
-#include "Geodesy.h"
+#include "../Utility/Geodesy.h"
+#include "../Utility/String.h"
 #include "minIni.h"
 
 using namespace Utility;
@@ -12,17 +12,17 @@ using namespace Utility;
 void GuConfig::ParseConfig(const std::string &conf_file) {
     minIni ini(conf_file);
     // Position BLH
-    init_pos[0] = D2R(ini.getf("Public", "init_pos_B"));
-    init_pos[1] = D2R(ini.getf("Public", "init_pos_L"));
+    init_pos[0] = ParseValue(ini.gets("Public", "init_pos_B"));
+    init_pos[1] = ParseValue(ini.gets("Public", "init_pos_L"));
     init_pos[2] = ini.getf("Public", "init_pos_H");
     // Velocity v_ned
     init_vel[0] = ini.getf("Public", "init_vel_N");
     init_vel[1] = ini.getf("Public", "init_vel_E");
     init_vel[2] = ini.getf("Public", "init_vel_D");
     // Attitude euler angle
-    init_euler.yaw = D2R(ini.getf("Public", "init_att_Y"));
-    init_euler.roll = D2R(ini.getf("Public", "init_att_R"));
-    init_euler.pitch = D2R(ini.getf("Public", "init_att_P"));
+    init_euler.yaw = ParseValue(ini.gets("Public", "init_att_Y"));
+    init_euler.roll = ParseValue(ini.gets("Public", "init_att_R"));
+    init_euler.pitch = ParseValue(ini.gets("Public", "init_att_P"));
     // Gyro, Accelerator bias & scale factor
     init_gb[0] = init_gb[1] = init_gb[2] = ini.getf("Public", "init_gb");
     init_ab[0] = init_ab[1] = init_ab[2] = ini.getf("Public", "init_ab");
@@ -35,10 +35,10 @@ void GuConfig::ParseConfig(const std::string &conf_file) {
     init_std_vel[0] = ini.getf("Public", "init_std_VN");
     init_std_vel[1] = ini.getf("Public", "init_std_VE");
     init_std_vel[2] = ini.getf("Public", "init_std_VD");
-    init_std_att[0] = D2R(ini.getf("Public", "init_std_R"));
-    init_std_att[1] = D2R(ini.getf("Public", "init_std_Y"));
-    init_std_att[2] = D2R(ini.getf("Public", "init_std_P"));
-    init_std_gb[0] = init_std_gb[1] = init_std_gb[2] = D2R(ini.getf("Public", "init_std_gb"));
+    init_std_att[0] = ParseValue(ini.gets("Public", "init_std_R"));
+    init_std_att[1] = ParseValue(ini.gets("Public", "init_std_Y"));
+    init_std_att[2] = ParseValue(ini.gets("Public", "init_std_P"));
+    init_std_gb[0] = init_std_gb[1] = init_std_gb[2] = ParseValue(ini.gets("Public", "init_std_gb"));
     init_std_ab[0] = init_std_ab[1] = init_std_ab[2] = ini.getf("Public", "init_std_ab");
     init_std_gs[0] = init_std_gs[1] = init_std_gs[2] = ini.getf("Public", "init_std_gs");
     init_std_as[0] = init_std_as[1] = init_std_as[2] = ini.getf("Public", "init_std_as");
@@ -57,4 +57,12 @@ void GuConfig::ParseConfig(const std::string &conf_file) {
     input_imu = ini.gets("File", "input_imu");
     input_gnss = ini.gets("File", "input_gnss");
     output = ini.gets("File", "output", "");
+}
+
+double GuConfig::ParseValue(const std::string &qty) {
+    double value;
+    std::string unit;
+    SplitValueAndUnit(qty, value, unit);
+    if (unit.find("deg") != std::string::npos) return D2R(value);
+    else return value;
 }

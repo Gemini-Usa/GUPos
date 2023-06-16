@@ -7,9 +7,9 @@
 #include <vector>
 #include <Eigen/Dense>
 #include "ImuData.h"
-#include "Algebra.h"
-#include "Geodesy.h"
-#include "String.h"
+#include "../Utility/Algebra.h"
+#include "../Utility/Geodesy.h"
+#include "../Utility/String.h"
 
 using namespace Eigen;
 using namespace Utility;
@@ -51,12 +51,12 @@ void ImuData::ParseImr(const char *str) {
     _accl[2] = -_accl_scale * static_cast<double>(*reinterpret_cast<int*>((char*)str + 28));
 }
 
-bool ImuData::isDuplicated(const ImuData &other) const {
+bool ImuData::IsDuplicated(const ImuData &other) const {
     if (fabs(this->_second - other._second) < 1.0e-3) return true;
     else return false;
 }
 
-double ImuData::getSecond() const {
+double ImuData::GetSecond() const {
     return _second;
 }
 
@@ -79,7 +79,7 @@ void ImuData::SmoothBy(const std::deque<ImuData> &dataset) {
 }
 
 void ImuData::StaticAlignment(const double *blh, EulerAngle &att) const {
-    Vector3d g_n{ 0.0, 0.0, getLocalGravity(blh[0], blh[2]) };
+    Vector3d g_n{0.0, 0.0, GetLocalGravity(blh[0], blh[2]) };
     Vector3d omg_ien{ omg_e * cos(blh[0]), 0.0, -omg_e * sin(blh[0]) };
     Vector3d g_b{ -this->_accl[0], -this->_accl[1], -this->_accl[2] };
     Vector3d omg_ieb{ this->_gyro[0], this->_gyro[1], this->_gyro[2] };
@@ -128,11 +128,11 @@ ImuData &ImuData::operator/=(int num) {
     return *this;
 }
 
-Eigen::Vector3d ImuData::getAccl() const {
+Eigen::Vector3d ImuData::GetAccl() const {
     return Eigen::Vector3d{ _accl[0], _accl[1], _accl[2] } / _rate;
 }
 
-Eigen::Vector3d ImuData::getGyro() const {
+Eigen::Vector3d ImuData::GetGyro() const {
     return Eigen::Vector3d{ _gyro[0], _gyro[1], _gyro[2] } / _rate;
 }
 
@@ -178,6 +178,6 @@ void ImuData::Compensate(const double *gb, const double *ab, const double *gs, c
     }
 }
 
-int ImuData::getRate() {
+int ImuData::GetRate() {
     return _rate;
 }

@@ -3,7 +3,7 @@
 //
 
 #include "GnssData.h"
-#include "Geodesy.h"
+#include "../Utility/Geodesy.h"
 
 void GnssData::Parse(const std::string &str) {
     _second = stod(str.substr(9, 13));
@@ -21,22 +21,22 @@ void GnssData::Parse(const std::string &str) {
     _vel_std[2] = stod(str.substr(180, 12));
 }
 
-double GnssData::getSecond() const {
+double GnssData::GetSecond() const {
     return _second;
 }
 
-const double *GnssData::getBlh() const {
+const double *GnssData::GetBlh() const {
     return _blh;
 }
 
-const double *GnssData::getBlhStd() const {
+const double *GnssData::GetBlhStd() const {
     return _blh_std;
 }
 
-const double *GnssData::getVel() const {
+const double *GnssData::GetVel() const {
     return _vel;
 }
 
-const double *GnssData::getVelStd() const {
+const double *GnssData::GetVelStd() const {
     return _vel_std;
 }

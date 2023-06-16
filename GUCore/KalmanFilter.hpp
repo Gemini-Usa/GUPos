@@ -23,14 +23,12 @@ public:
     template<int Measure>
     void KFUpdate(const zdim<Measure> &z, const Hdim<Measure> &H, const Rdim<Measure> &R, double dt);
 public: // Getter and Setter
-    const xdim &getX() const {
+    const xdim &GetX() const {
         return _x;
     }
-
-    void setX(const xdim &x) {
+    void SetX(const xdim &x) {
         _x = x;
     }
-
 protected:
     xdim _x{ xdim::Zero() };
     Pdim _P{ Pdim::Zero() };

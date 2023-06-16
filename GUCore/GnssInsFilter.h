@@ -17,22 +17,19 @@ public:
                     const std::pair<const double *, const double *> &gyro_bias, const std::pair<const double *, const double *> &accl_bias,
                     const std::pair<const double *, const double *> &gyro_scale, const std::pair<const double *, const double *> &accl_scale,
                     const ImuData &imu);
-    void setMarkovTime(double Tgb, double Tab, double Tgs, double Tas);
-    void setLeverArm(const double *lever);
-    void setRandomWalk(double ARW, double VRW);
     void ProcessData(const ImuData &imu, const GnssData &gnss = GnssData());
     void PrintState() const;
-    std::tuple<const double *, const double *, Eigen::Quaterniond> getState() const;
-    bool isZeroUpdate() const;
+    std::tuple<const double *, const double *, Eigen::Quaterniond> GetState() const;
+    bool IsZeroUpdate() const;
 private:
-    static void setF_rr(Fdim &F, double vn, double ve, double vd, double phi, double h);
-    static void setF_vr(Fdim &F, double vn, double ve, double vd, double phi, double h);
-    static void setF_vv(Fdim &F, double vn, double ve, double vd, double phi, double h);
-    static void setF_phir(Fdim &F, double vn, double ve, double vd, double phi, double h);
-    static void setF_phiv(Fdim &F, double phi, double h);
-    static void setF_Anginn(Fdim &F, double vn, double ve, double phi, double h);
-    Fdim buildF(const ImuData &imu, double dt) const;
-    Qdim buildQ(const Fdim &F, double dt) const;
+    static void SetF_rr(Fdim &F, double vn, double ve, double vd, double phi, double h);
+    static void SetF_vr(Fdim &F, double vn, double ve, double vd, double phi, double h);
+    static void SetF_vv(Fdim &F, double vn, double ve, double vd, double phi, double h);
+    static void SetF_phir(Fdim &F, double vn, double ve, double vd, double phi, double h);
+    static void SetF_phiv(Fdim &F, double phi, double h);
+    static void SetF_Anginn(Fdim &F, double vn, double ve, double phi, double h);
+    Fdim BuildF(const ImuData &imu, double dt) const;
+    Qdim BuildQ(const Fdim &F, double dt) const;
     Hdim<3> PosBuildH(const ImuData &imu, double dt) const;
     zdim<3> PosBuildz(const ImuData &imu, const GnssData &gnss, double dt) const;
     Rdim<3> PosBuildR(const GnssData &gnss) const;
@@ -42,6 +39,14 @@ private:
     Hdim<7> ZeroBuildH(const ImuData &imu, const Utility::EulerAngle &euler, double dt) const;
     zdim<7> ZeroBuildz(const ImuData &imu, const Utility::EulerAngle &prev_euler, const Utility::EulerAngle &curr_euler, double dt) const;
     Rdim<7> ZeroBuildR() const;
+public:
+    const double *GetGb() const;
+    const double *GetAb() const;
+    const double *GetGs() const;
+    const double *GetAs() const;
+    void SetMarkovTime(double Tgb, double Tab, double Tgs, double Tas);
+    void SetLeverArm(const double *lever);
+    void SetRandomWalk(double ARW, double VRW);
 private:
     InsMechanizer _ins;
     ZeroDetector _zupt{ 20, 3.5E-5 };

@@ -17,17 +17,17 @@ public:
     void Initialize(const double* pos, const double* vel, const Eigen::Quaterniond& att, const ImuData& imu);
     void INSUpdate(const ImuData& data);
     void PrintState() const;
-    std::tuple<const double *, const double *, Eigen::Quaterniond> getState() const;
-    double getTimeInterval(double curr_time) const;
     void Correct(const Eigen::Vector3d &dp, const Eigen::Vector3d &dv, const Eigen::Quaterniond &dq);
 private:
-    void positionUpdate(const ImuData &curr_imu, const double *curr_vel, double *pos);
-    void velocityUpdate(const ImuData &curr_imu, double *vel);
-    void attitudeUpdate(const ImuData &curr_imu, Eigen::Quaterniond& att);
+    void PositionUpdate(const ImuData &curr_imu, const double *curr_vel, double *pos);
+    void VelocityUpdate(const ImuData &curr_imu, double *vel);
+    void AttitudeUpdate(const ImuData &curr_imu, Eigen::Quaterniond& att);
 public:
-    const double *getVel() const;
-    const double *getPos() const;
-    const Quaterniond &getAtt() const;
+    const double *GetVel() const;
+    const double *GetPos() const;
+    const Quaterniond &GetAtt() const;
+    std::tuple<const double *, const double *, Eigen::Quaterniond> GetState() const;
+    double GetTimeInterval(double curr_time) const;
 private:
     ImuData _imu_data;
     std::deque<std::tuple<double*, double*>> _state_queue;
