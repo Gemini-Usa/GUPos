@@ -1,5 +1,5 @@
 //
-// Created by 崔宇璐 on 2023/6/8.
+// Created by GeminiUsa on 2023/6/8.
 //
 
 #ifndef GUPOS_GNSSINSFILTER_H
@@ -39,6 +39,7 @@ private:
     Hdim<7> ZeroBuildH(const ImuData &imu, const Utility::EulerAngle &euler, double dt) const;
     zdim<7> ZeroBuildz(const ImuData &imu, const Utility::EulerAngle &prev_euler, const Utility::EulerAngle &curr_euler, double dt) const;
     Rdim<7> ZeroBuildR() const;
+    void CorrectState(double dt);
 public:
     const double *GetGb() const;
     const double *GetAb() const;

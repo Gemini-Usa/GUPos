@@ -1,5 +1,5 @@
 //
-// Created by 崔宇璐 on 2023/6/12.
+// Created by GeminiUsa on 2023/6/12.
 //
 
 #ifndef GUPOS_GUCONFIG_H

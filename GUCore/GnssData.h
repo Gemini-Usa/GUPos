@@ -1,5 +1,5 @@
 //
-// Created by 崔宇璐 on 2023/5/29.
+// Created by GeminiUsa on 2023/5/29.
 //
 
 #ifndef GUPOS_GNSSDATA_H

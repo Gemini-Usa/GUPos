@@ -1,5 +1,5 @@
 //
-// Created by admin on 2023/6/12.
+// Created by GeminiUsa on 2023/6/12.
 //
 
 #ifndef GUPOS_ZERODETECTOR_H

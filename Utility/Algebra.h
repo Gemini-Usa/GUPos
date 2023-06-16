@@ -1,5 +1,5 @@
 //
-// Created by 崔宇璐 on 2023/5/16.
+// Created by GeminiUsa on 2023/5/16.
 //
 
 #ifndef GUPOS_ALGEBRA_H

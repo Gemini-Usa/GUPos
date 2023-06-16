@@ -4,9 +4,6 @@
 #include <chrono>
 #include <map>
 #include <Eigen/Dense>
-#ifdef WIN32
-#include <corecrt_math_defines.h>
-#endif
 #include "Utility/Algebra.h"
 #include "Utility/Geodesy.h"
 #include "Utility/String.h"
@@ -15,11 +12,14 @@
 #include "GUCore/GnssData.h"
 #include "GUCore/GnssInsFilter.h"
 #include "Configure/GuConfig.h"
+#ifdef WIN32
+#include <corecrt_math_defines.h>
+#endif
 
 using namespace Utility;
 using namespace std::chrono;
 
-constexpr char conf_file[]{ ".//conf_cover.ini" };
+constexpr char conf_file[]{ "Configure//conf_open.ini" };
 constexpr double max_gap{ 0.011 };
 
 struct TrueResult {
@@ -80,7 +80,7 @@ void ReadTrueResult(std::vector<TrueResult> &res, const std::string &file_name) 
 }
 
 void ReadIMUFile(const std::string &filename, std::vector<ImuData>& imu_data) {
-    if (filename.find(".ASC") != std::string::npos) {
+    if (filename.find(".ASC") != std::string::npos) { // Try Read ASC
         std::ifstream ifs{filename, std::ios::in};
         if (!ifs.is_open()) return;
         std::string line;
@@ -95,7 +95,7 @@ void ReadIMUFile(const std::string &filename, std::vector<ImuData>& imu_data) {
             imu_data.emplace_back(curr_imu);
         }
         ifs.close();
-    } else if (filename.find(".imr") != std::string::npos) {
+    } else if (filename.find(".imr") != std::string::npos) { // Try Read imr
         std::ifstream ifs{ filename, std::ios::in | std::ios::binary };
         if (!ifs.is_open()) return;
         char header[512];
@@ -142,7 +142,7 @@ void ReadPosFile(const std::string &filename, std::vector<GnssData>& pos_results
     }
     std::string line;
     GnssData pos_result;
-    for (int i = 0; i < 2; ++i) getline(ifs, line);
+    for (int i = 0; i < 2; ++i) getline(ifs, line); // Skip The First Two Line For Convenience
     while (getline(ifs, line)) {
         pos_result.Parse(line);
         pos_results.push_back(pos_result);
@@ -224,7 +224,7 @@ void LooselyCouple(const std::vector<ImuData> &imu_data, const std::vector<GnssD
     filter.SetLeverArm(conf.lever);
     filter.SetMarkovTime(conf.markov_time, conf.markov_time, conf.markov_time, conf.markov_time);
     filter.SetRandomWalk(conf.ARW, conf.VRW);
-    // Time Synchronize
+    // Time Synchronize And Solve
     double i_time, g_time, r_time;
     int i = 0, k = 0, n = 0;
     while(fabs(imu_data.at(i).GetSecond() - toe) > 1.0E-3) ++i;
@@ -243,26 +243,31 @@ void LooselyCouple(const std::vector<ImuData> &imu_data, const std::vector<GnssD
         } else {
             filter.ProcessData(imu_data.at(i));
         }
-        OutputResult(i_time, filter, conf, ofs); // Output Result
-//        if (ofs.is_open() && fabs(r_time - i_time) < 1.0E-3) { // Output Result Different With Reference Result
-//            const auto ref = true_results.at(n++);
-//            OutputResult(i_time, filter, ref, conf, ofs);
-//        }
+        // OutputResult(i_time, filter, conf, ofs); // Output Result
+        if (ofs.is_open() && fabs(r_time - i_time) < 1.0E-3) { // Output Result Different With Reference Result
+            const auto ref = true_results.at(n++);
+            OutputResult(i_time, filter, ref, conf, ofs);
+        }
     }
     filter.PrintState();
 }
 
 int main() {
+    // Read Configure File
     GuConfig conf;
     conf.ParseConfig(conf_file);
+    // Read IMU File
     std::vector<ImuData> imu_data;
     imu_data.reserve(150000);
+    ReadIMUFile(conf.input_imu, imu_data);
+    // Read GNSS File
     std::vector<GnssData> pos_results;
     ReadPosFile(conf.input_gnss, pos_results);
+    // Read Reference Result
     std::vector<TrueResult> true_results;
-    ReadTrueResult(true_results, "..//Data//ref_open2.pos");
+    ReadTrueResult(true_results, "..//Data//ref_open.pos");
+    // Start To Solve
     auto start = system_clock::now();                                               // timing
-    ReadIMUFile(conf.input_imu, imu_data);
     LooselyCouple(imu_data, pos_results, true_results, conf);
     auto end = system_clock::now();                                                 // timing
     auto duration = duration_cast<seconds>(end - start);                            // timing

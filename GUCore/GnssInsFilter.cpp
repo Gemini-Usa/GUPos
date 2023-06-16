@@ -1,5 +1,5 @@
 //
-// Created by 崔宇璐 on 2023/6/8.
+// Created by GeminiUsa on 2023/6/8.
 //
 
 #include "GnssInsFilter.h"
@@ -304,7 +304,10 @@ void GnssInsFilter::ProcessData(const ImuData &imu, const GnssData &gnss) {
         auto R = this->ZeroBuildR();
         this->KFUpdate<7>(z, H, R, dt);
     }
-    // Correct position, velocity, attitude and device parameter
+    CorrectState(dt);
+}
+
+void GnssInsFilter::CorrectState(double dt) {
     const auto *pos = _ins.GetPos();
     double R_M = GetRM(pos[0]);
     double R_N = GetRN(pos[0]);
